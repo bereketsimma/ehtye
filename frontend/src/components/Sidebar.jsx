@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: '📊' },
   { path: '/tutors', label: 'Tutors', icon: '👨‍🏫' },
+  { path: '/courses', label: 'Courses', icon: '📚' },
   { path: '/students', label: 'Students', icon: '👩‍🎓' },
   { path: '/sessions', label: 'Sessions', icon: '📅' },
   { path: '/reviews', label: 'Reviews', icon: '⭐' },
@@ -16,7 +17,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <h2><span>Mentor</span>Hub</h2>
+        <h2>Ehtye</h2>
       </div>
       <nav className="sidebar-nav">
         {navItems.map((item) => (

@@ -6,8 +6,9 @@ export default function Sessions() {
   const { user } = useAuth()
   const [lessons, setLessons] = useState([])
   const [students, setStudents] = useState([])
+  const [courses, setCourses] = useState([])
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ student: '', subject: '', scheduled_at: '' })
+  const [form, setForm] = useState({ student: '', course: '', scheduled_at: '' })
   const [error, setError] = useState('')
 
   const fetchLessons = async () => {
@@ -21,14 +22,23 @@ export default function Sessions() {
 
   const fetchStudents = async () => {
     try {
-      const res = await api.get('/students/')
+      const res = await api.get('/students/', { params: { all: 1 } })
       setStudents(res.data)
     } catch (err) {
       console.error(err)
     }
   }
 
-  useEffect(() => { fetchLessons(); if (user?.role === 'tutor') fetchStudents() }, [user])
+  const fetchCourses = async () => {
+    try {
+      const res = await api.get('/tutor/courses/')
+      setCourses(res.data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => { fetchLessons(); if (user?.role === 'tutor') { fetchStudents(); fetchCourses() } }, [user])
 
   const handleCreate = async (e) => {
     e.preventDefault()
@@ -38,7 +48,7 @@ export default function Sessions() {
         ...form,
         scheduled_at: new Date(form.scheduled_at).toISOString(),
       })
-      setForm({ student: '', subject: '', scheduled_at: '' })
+      setForm({ student: '', course: '', scheduled_at: '' })
       setShowForm(false)
       fetchLessons()
     } catch (err) {
@@ -104,8 +114,13 @@ export default function Sessions() {
               </select>
             </div>
             <div className="form-group">
-              <label>Subject</label>
-              <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} required />
+              <label>Course</label>
+              <select value={form.course} onChange={(e) => setForm({ ...form, course: e.target.value })} required>
+                <option value="">Select course</option>
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>{c.course_id} - {c.course_name}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group">
               <label>Scheduled Date & Time</label>

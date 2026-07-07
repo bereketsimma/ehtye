@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import Lesson, Parent, Review, Student, Tutor
+from .models import Course, Lesson, Parent, Review, Student, Tutor
+
+
+@admin.register(Course)
+class CourseAdmin(admin.ModelAdmin):
+    list_display = ("course_id", "course_name", "rate", "created_at")
+    search_fields = ("course_id", "course_name")
+    list_filter = ("rate",)
 
 
 @admin.register(Tutor)
