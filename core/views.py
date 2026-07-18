@@ -1,10 +1,11 @@
 from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Lesson, Review, Student
+from .models import Course, Lesson, Review, Student
 from .permissions import (
     IsParent,
     IsParentOfLessonStudent,
@@ -14,6 +15,7 @@ from .permissions import (
     IsTutorOfLesson,
 )
 from .serializers import (
+    CourseSerializer,
     LessonSerializer,
     RegisterSerializer,
     ReviewSerializer,
@@ -61,15 +63,55 @@ def login(request):
     return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
+class CourseViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CourseSerializer
+    queryset = Course.objects.all()
+    permission_classes = [IsAuthenticated]
+
+
+class TutorCoursesViewSet(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated, IsTutor]
+
+    def list(self, request):
+        tutor = request.user.tutor_profile
+        serializer = CourseSerializer(tutor.courses.all(), many=True)
+        return Response(serializer.data)
+
+    def create(self, request):
+        course_id = request.data.get('course_id')
+        try:
+            course = Course.objects.get(course_id=course_id)
+        except Course.DoesNotExist:
+            return Response({'error': 'Course not found.'}, status=status.HTTP_404_NOT_FOUND)
+        tutor = request.user.tutor_profile
+        tutor.courses.add(course)
+        return Response({'status': f'Added {course.course_name}'})
+
+    def destroy(self, request, pk=None):
+        tutor = request.user.tutor_profile
+        course = get_object_or_404(Course, pk=pk)
+        tutor.courses.remove(course)
+        return Response({'status': f'Removed {course.course_name}'})
+
+
 class StudentViewSet(viewsets.ModelViewSet):
     serializer_class = StudentSerializer
-    permission_classes = [IsAuthenticated, IsParent]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
         if hasattr(user, 'parent_profile'):
             return Student.objects.filter(parent=user.parent_profile)
+        if hasattr(user, 'tutor_profile'):
+            if self.request.query_params.get('all'):
+                return Student.objects.all()
+            return Student.objects.filter(lessons__tutor=user.tutor_profile).distinct()
         return Student.objects.none()
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsAuthenticated(), IsParent()]
+        return [IsAuthenticated()]
 
     def perform_create(self, serializer):
         serializer.save(parent=self.request.user.parent_profile)

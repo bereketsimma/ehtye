@@ -4,6 +4,20 @@ from django.db import models
 from django.utils import timezone
 
 
+class Course(models.Model):
+    course_id = models.CharField(max_length=20, unique=True)
+    course_name = models.CharField(max_length=200)
+    rate = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["course_id"]
+
+    def __str__(self):
+        return f"{self.course_id} - {self.course_name}"
+
+
 class Tutor(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='tutor_profile')
     first_name = models.CharField(max_length=100)
@@ -11,6 +25,7 @@ class Tutor(models.Model):
     national_id = models.CharField(max_length=50, unique=True)
     email = models.EmailField(unique=True)
     document = models.FileField(upload_to="tutors/documents/")
+    courses = models.ManyToManyField(Course, related_name='tutors', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -60,6 +75,7 @@ class Lesson(models.Model):
 
     tutor = models.ForeignKey(Tutor, on_delete=models.CASCADE, related_name='lessons')
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='lessons')
+    course = models.ForeignKey(Course, on_delete=models.SET_NULL, null=True, blank=True, related_name='lessons')
     subject = models.CharField(max_length=200)
     scheduled_at = models.DateTimeField()
     started_at = models.DateTimeField(null=True, blank=True)

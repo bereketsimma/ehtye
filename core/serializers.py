@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
-from .models import Lesson, Parent, Review, Student, Tutor
+from .models import Course, Lesson, Parent, Review, Student, Tutor
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -45,6 +45,13 @@ class RegisterSerializer(serializers.Serializer):
         return {'user': user, 'profile': profile, 'token': token.key, 'role': role}
 
 
+class CourseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Course
+        fields = ['id', 'course_id', 'course_name', 'rate', 'created_at', 'updated_at']
+        read_only_fields = ['created_at', 'updated_at']
+
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -68,12 +75,13 @@ class StudentSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     tutor_name = serializers.SerializerMethodField()
     student_name = serializers.SerializerMethodField()
+    subject = serializers.CharField(required=False)
 
     class Meta:
         model = Lesson
         fields = [
             'id', 'tutor', 'tutor_name', 'student', 'student_name',
-            'subject', 'scheduled_at', 'started_at', 'ended_at',
+            'course', 'subject', 'scheduled_at', 'started_at', 'ended_at',
             'status', 'notes', 'created_at', 'updated_at',
         ]
         read_only_fields = ['tutor', 'started_at', 'ended_at', 'status', 'created_at', 'updated_at']
@@ -90,9 +98,19 @@ class LessonSerializer(serializers.ModelSerializer):
             pass
         return value
 
+    def validate_course(self, value):
+        request = self.context.get('request')
+        if request and hasattr(request.user, 'tutor_profile'):
+            if value not in request.user.tutor_profile.courses.all():
+                raise serializers.ValidationError("You can only use a course you have added.")
+        return value
+
     def create(self, validated_data):
         request = self.context.get('request')
         validated_data['tutor'] = request.user.tutor_profile
+        course = validated_data.get('course')
+        if course and not validated_data.get('subject'):
+            validated_data['subject'] = course.course_name
         return super().create(validated_data)
 
 

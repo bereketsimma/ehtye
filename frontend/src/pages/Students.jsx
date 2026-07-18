@@ -10,7 +10,6 @@ export default function Students() {
   const [error, setError] = useState('')
 
   const fetchStudents = async () => {
-    if (user?.role !== 'parent') return
     try {
       const res = await api.get('/students/')
       setStudents(res.data)
